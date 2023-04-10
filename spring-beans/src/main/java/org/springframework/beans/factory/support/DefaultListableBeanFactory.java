@@ -1262,16 +1262,22 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				}
 			}
 
+			// resolveMultipleBeans方法是解析当前依赖项是否支持多个bean注入，比如list
+			// 如果是能支持多个注入则在该方法内部就完成了bean的查找，否则下面完成查找
 			Object multipleBeans = resolveMultipleBeans(descriptor, beanName, autowiredBeanNames, typeConverter);
 			if (multipleBeans != null) {
 				return multipleBeans;
 			}
 
+			// 完成查找的功能 有可能会查找出多个结果
+			// 需要注意的是这里的多个结果和上面的支持多个注入不是同一个情况
 			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, type, descriptor);
 			if (matchingBeans.isEmpty()) {
+				// 如果没有找到而你在依赖上面加了必须得条件 会抛出异常
 				if (isRequired(descriptor)) {
 					raiseNoMatchingBeanFound(type, descriptor.getResolvableType(), descriptor);
 				}
+				// 如果没有加必须条件则返回null， 意思就是没有任何对象
 				return null;
 			}
 
