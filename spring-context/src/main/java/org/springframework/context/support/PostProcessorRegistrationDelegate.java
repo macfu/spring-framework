@@ -53,6 +53,18 @@ final class PostProcessorRegistrationDelegate {
 	}
 
 
+	/**
+	 * 执行 直接实现了BeanFactoryPostProcessor或者实现了BeanDefinitionRegistryPostProcessor
+	 * 问题：
+	 * 1. 顺序能变吗
+	 * 2. BeanDefinitionRegistryPostProcessor和ImportBeanDefinitionRegistry的区别
+	 * 3. PriorityOrderedPostProcessors 为什么先实例化
+	 * 4. processedBeans当中为什么不存api传过来的 api提供的子类或者父类都不可能重复执行
+	 * 5. BeanDefinitionRegistryPostProcessor对于bd的修改，如何保证正确？ 提高当前类的优先级
+	 * 6. BeanFactoryPostProcessor当中为什么不开发（bd注册）有什么问题？  会产生不合格的bean
+	 * @param beanFactory
+	 * @param beanFactoryPostProcessors
+	 */
 	public static void invokeBeanFactoryPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, List<BeanFactoryPostProcessor> beanFactoryPostProcessors) {
 
@@ -109,6 +121,11 @@ final class PostProcessorRegistrationDelegate {
 			invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);
 			currentRegistryProcessors.clear();
 
+			/**
+			 * 为什么还有第三次：
+			 * 1. 第二次找出来的BeanDefinitionRegistryPostProcessor会动态添加新的BeanDefinitionRegistryPostProcessor
+			 * 2. 上面有条件判断 有的没有执行（beanFactory.isTypeMatch(ppName, Ordered.class)）
+			 */
 			// Finally, invoke all other BeanDefinitionRegistryPostProcessors until no further ones appear.
 			boolean reiterate = true;
 			while (reiterate) {
@@ -118,6 +135,8 @@ final class PostProcessorRegistrationDelegate {
 					if (!processedBeans.contains(ppName)) {
 						currentRegistryProcessors.add(beanFactory.getBean(ppName, BeanDefinitionRegistryPostProcessor.class));
 						processedBeans.add(ppName);
+						// 如果找到了，后面还需要继续循环 继续找
+						// 找出来的必然是子类 有可能会动态继续添加新的BeanDefinitionRegistry
 						reiterate = true;
 					}
 				}
@@ -144,8 +163,12 @@ final class PostProcessorRegistrationDelegate {
 
 		// Separate between BeanFactoryPostProcessors that implement PriorityOrdered,
 		// Ordered, and the rest.
+		// 实现了priorityOrdered的父类集合
+		// priorityOrderedPostProcessors[]
 		List<BeanFactoryPostProcessor> priorityOrderedPostProcessors = new ArrayList<>();
+		// 实现了Order接口的父类集合
 		List<String> orderedPostProcessorNames = new ArrayList<>();
+		// 没有任何实现
 		List<String> nonOrderedPostProcessorNames = new ArrayList<>();
 		for (String ppName : postProcessorNames) {
 			if (processedBeans.contains(ppName)) {
