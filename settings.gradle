@@ -38,3 +38,5 @@ rootProject.children.each {project ->
 }
 include 'spring-example'
 
+include 'spring-example'
+
